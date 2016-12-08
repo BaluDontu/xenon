@@ -13,11 +13,6 @@
 
 package com.vmware.xenon.services.common;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import com.vmware.xenon.common.FactoryService;
 import com.vmware.xenon.common.Operation;
 import com.vmware.xenon.common.ServiceDocument;
@@ -26,13 +21,11 @@ import com.vmware.xenon.common.ServiceDocumentDescription.PropertyIndexingOption
 import com.vmware.xenon.common.ServiceDocumentDescription.PropertyUsageOption;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.xenon.common.Utils;
-import com.vmware.xenon.common.ServiceDocument.PropertyOptions;
-import com.vmware.xenon.common.ServiceDocument.UsageOption;
 
 /**
  * Example service
  */
-public class vSphereDockerHost extends StatefulService {
+public class VSphereDockerHost extends StatefulService {
 
     public static final String FACTORY_LINK = ServiceUriPaths.CORE + "/vSphereDockerHost";
 
@@ -41,49 +34,22 @@ public class vSphereDockerHost extends StatefulService {
      * This method is optional, {@code FactoryService.create} can be used directly
      */
     public static FactoryService createFactory() {
-        return FactoryService.create(vSphereDockerHost.class);
+        return FactoryService.create(VSphereDockerHost.class);
     }
 
     public static class ExampleServiceState extends ServiceDocument {
-    	public static final String FIELD_NAME_ESX_IP = "esxIPAddress";
-    	public static final String FIELD_NAME_TENANT_NAME = "tenantName";
+        public static final String FIELD_NAME_ESX_IP = "esxIPAddress";
+        public static final String FIELD_NAME_TENANT_NAME = "tenantName";
 
-    	public static final String FIELD_NAME_KEY_VALUES = "keyValues";
-        public static final String FIELD_NAME_COUNTER = "counter";
-        public static final String FIELD_NAME_SORTED_COUNTER = "sortedCounter";
-        public static final String FIELD_NAME_NAME = "name";
-        public static final String FIELD_NAME_TAGS = "tags";
-        public static final String FIELD_NAME_ID = "id";
-        public static final String FIELD_NAME_REQUIRED = "required";
-        public static final long VERSION_RETENTION_LIMIT = 100;
-        public static final long VERSION_RETENTION_FLOOR = 20;
-
+        @UsageOption(option = PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
+        @PropertyOptions(indexing = PropertyIndexingOption.SORT)
         @UsageOption(option = PropertyUsageOption.OPTIONAL)
         public String tenantName;
         @UsageOption(option = PropertyUsageOption.REQUIRED)
         public String esxIPAddress;
-
-        @UsageOption(option = PropertyUsageOption.OPTIONAL)
-        @PropertyOptions(indexing = { PropertyIndexingOption.EXPAND,
-                PropertyIndexingOption.FIXED_ITEM_NAME })
-        @UsageOption(option = PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
-        public Map<String, String> keyValues = new HashMap<>();
-        public Long counter;
-        @PropertyOptions(indexing = PropertyIndexingOption.SORT)
-        public Long sortedCounter;
-        @UsageOption(option = PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
-        @PropertyOptions(indexing = PropertyIndexingOption.SORT)
-        public String name;
-        @UsageOption(option = PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
-        public Set<String> tags = new HashSet<>();
-        @UsageOption(option = PropertyUsageOption.ID)
-        @UsageOption(option = PropertyUsageOption.REQUIRED)
-        public String id;
-        @UsageOption(option = PropertyUsageOption.REQUIRED)
-        public String required;
     }
 
-    public vSphereDockerHost() {
+    public VSphereDockerHost() {
         super(ExampleServiceState.class);
         toggleOption(ServiceOption.PERSISTENCE, true);
         toggleOption(ServiceOption.REPLICATION, true);
@@ -104,7 +70,7 @@ public class vSphereDockerHost extends StatefulService {
         }
 
         ExampleServiceState s = startPost.getBody(ExampleServiceState.class);
-        if (s.name == null) {
+        if (s.esxIPAddress == null) {
             startPost.fail(new IllegalArgumentException("name is required"));
             return;
         }
@@ -114,19 +80,7 @@ public class vSphereDockerHost extends StatefulService {
 
     @Override
     public void handlePut(Operation put) {
-        ExampleServiceState newState = getBody(put);
-        ExampleServiceState currentState = getState(put);
 
-        // example of structural validation: check if the new state is acceptable
-        if (currentState.name != null && newState.name == null) {
-            put.fail(new IllegalArgumentException("name must be set"));
-            return;
-        }
-
-        updateCounter(newState, currentState, false);
-
-        // replace current state, with the body of the request, in one step
-        setState(put, newState);
         put.complete();
     }
 
@@ -150,7 +104,7 @@ public class vSphereDockerHost extends StatefulService {
         boolean hasStateChanged = Utils.mergeWithState(getStateDescription(),
                 currentState, body);
 
-        updateCounter(body, currentState, hasStateChanged);
+        updateDocument(body, currentState, hasStateChanged);
 
         if (body.documentExpirationTimeMicros != currentState.documentExpirationTimeMicros) {
             currentState.documentExpirationTimeMicros = body.documentExpirationTimeMicros;
@@ -161,16 +115,10 @@ public class vSphereDockerHost extends StatefulService {
         return currentState;
     }
 
-    private boolean updateCounter(ExampleServiceState body,
+    private boolean updateDocument(ExampleServiceState body,
             ExampleServiceState currentState, boolean hasStateChanged) {
-        if (body.counter != null) {
-            if (currentState.counter == null) {
-                currentState.counter = body.counter;
-            }
-            // deal with possible operation re-ordering by simply always
-            // moving the counter up
-            currentState.counter = Math.max(body.counter, currentState.counter);
-            body.counter = currentState.counter;
+        if (body.esxIPAddress != null) {
+            currentState.esxIPAddress = body.esxIPAddress;
             hasStateChanged = true;
         }
         return hasStateChanged;
@@ -201,27 +149,14 @@ public class vSphereDockerHost extends StatefulService {
     @Override
     public ServiceDocument getDocumentTemplate() {
         ServiceDocument template = super.getDocumentTemplate();
-        PropertyDescription pd = template.documentDescription.propertyDescriptions.get(
-                ExampleServiceState.FIELD_NAME_KEY_VALUES);
 
-        // instruct the index to deeply index the map
-        pd.indexingOptions.add(PropertyIndexingOption.EXPAND);
-
-        PropertyDescription pdTags = template.documentDescription.propertyDescriptions.get(
-                ExampleServiceState.FIELD_NAME_TAGS);
-
-        // instruct the index to deeply index the set of tags
-        pdTags.indexingOptions.add(PropertyIndexingOption.EXPAND);
-
-        PropertyDescription pdName = template.documentDescription.propertyDescriptions.get(
-                ExampleServiceState.FIELD_NAME_NAME);
+        PropertyDescription pdTenantName = template.documentDescription.propertyDescriptions.get(
+                ExampleServiceState.FIELD_NAME_TENANT_NAME);
 
         // instruct the index to enable SORT on this field.
-        pdName.indexingOptions.add(PropertyIndexingOption.SORT);
+        pdTenantName.indexingOptions.add(PropertyIndexingOption.SORT);
 
         // instruct the index to only keep the most recent N versions
-        template.documentDescription.versionRetentionLimit = ExampleServiceState.VERSION_RETENTION_LIMIT;
-        template.documentDescription.versionRetentionFloor = ExampleServiceState.VERSION_RETENTION_FLOOR;
         return template;
     }
 }
