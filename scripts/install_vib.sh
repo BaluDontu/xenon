@@ -1,5 +1,5 @@
 #/bin/bash
-set -x
+#set -x
 # script to install vmdkops VIB on a given esx host
 source common.sh
 
