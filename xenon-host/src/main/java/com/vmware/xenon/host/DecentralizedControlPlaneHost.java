@@ -16,8 +16,8 @@ package com.vmware.xenon.host;
 import java.util.logging.Level;
 
 import com.vmware.xenon.common.ServiceHost;
-import com.vmware.xenon.services.common.GetVolumeService;
 import com.vmware.xenon.services.common.RootNamespaceService;
+import com.vmware.xenon.services.common.VSphereDockerHost;
 import com.vmware.xenon.ui.UiService;
 
 /**
@@ -42,12 +42,12 @@ public class DecentralizedControlPlaneHost extends ServiceHost {
 
         startDefaultCoreServicesSynchronously();
 
-        setAuthorizationContext(this.getSystemAuthorizationContext());
+        setAuthorizationContext(getSystemAuthorizationContext());
 
         super.startService(new RootNamespaceService());
 
         // start an example factory for folks that want to experiment with service instances
-        super.startFactory(GetVolumeService.class, GetVolumeService::createFactory);
+        super.startFactory(VSphereDockerHost.class, VSphereDockerHost::createFactory);
 
         // Start UI service
         super.startService(new UiService());

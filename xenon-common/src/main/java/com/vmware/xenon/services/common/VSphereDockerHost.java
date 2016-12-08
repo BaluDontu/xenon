@@ -13,6 +13,12 @@
 
 package com.vmware.xenon.services.common;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.vmware.xenon.common.FactoryService;
 import com.vmware.xenon.common.Operation;
 import com.vmware.xenon.common.ServiceDocument;
@@ -28,6 +34,8 @@ import com.vmware.xenon.common.Utils;
 public class VSphereDockerHost extends StatefulService {
 
     public static final String FACTORY_LINK = ServiceUriPaths.CORE + "/vSphereDockerHost";
+    public Map<String, String> vmID_Name = new HashMap<>();
+    public Map<String, String> vmID_ESX = new HashMap<>();
 
     /**
      * Create a default factory service that starts instances of this service on POST.
@@ -37,7 +45,7 @@ public class VSphereDockerHost extends StatefulService {
         return FactoryService.create(VSphereDockerHost.class);
     }
 
-    public static class ExampleServiceState extends ServiceDocument {
+    public static class VSphereDockerHostState extends ServiceDocument {
         public static final String FIELD_NAME_ESX_IP = "esxIPAddress";
         public static final String FIELD_NAME_TENANT_NAME = "tenantName";
 
@@ -50,11 +58,40 @@ public class VSphereDockerHost extends StatefulService {
     }
 
     public VSphereDockerHost() {
-        super(ExampleServiceState.class);
-        toggleOption(ServiceOption.PERSISTENCE, true);
-        toggleOption(ServiceOption.REPLICATION, true);
-        toggleOption(ServiceOption.INSTRUMENTATION, true);
-        toggleOption(ServiceOption.OWNER_SELECTION, true);
+        super(VSphereDockerHostState.class);
+        this.toggleOption(ServiceOption.PERSISTENCE, true);
+        this.toggleOption(ServiceOption.REPLICATION, true);
+        this.toggleOption(ServiceOption.INSTRUMENTATION, true);
+        this.toggleOption(ServiceOption.OWNER_SELECTION, true);
+        this.vmID_Name.put("vm-39", "VM1");
+        this.vmID_Name.put("vm-38", "VM2");
+        this.vmID_Name.put("vm-39", "10.160.167.177");
+        this.vmID_Name.put("vm-38", "10.161.12.165");
+    }
+
+    private int readBashScript() throws IOException {
+        BufferedReader read = null;
+        try {
+            Process proc = Runtime.getRuntime()
+                    .exec("sh /Users/bdontu/install_vib.sh 10.160.167.177"); //Whatever you want to execute
+            read = new BufferedReader(new InputStreamReader(
+                    proc.getInputStream(), "UTF-8"));
+            try {
+                proc.waitFor();
+            } catch (InterruptedException e) {
+                return 1;
+            }
+            while (read.ready()) {
+                continue;
+            }
+        } catch (IOException e) {
+            return 3;
+        } finally {
+            if (read != null) {
+                read.close();
+            }
+        }
+        return 0;
     }
 
     @Override
@@ -69,12 +106,20 @@ public class VSphereDockerHost extends StatefulService {
             return;
         }
 
-        ExampleServiceState s = startPost.getBody(ExampleServiceState.class);
+        VSphereDockerHostState s = startPost.getBody(VSphereDockerHostState.class);
         if (s.esxIPAddress == null) {
-            startPost.fail(new IllegalArgumentException("name is required"));
+            startPost.fail(new IllegalArgumentException("esxIPAddress is required"));
             return;
         }
-
+        int i;
+        try {
+            i = this.readBashScript();
+            if (i != 0) {
+                startPost.fail(new IllegalArgumentException("readBashScript1 failed " + i));
+            }
+        } catch (IOException e) {
+            startPost.fail(new IllegalArgumentException("readBashScript failed"));
+        }
         startPost.complete();
     }
 
@@ -86,25 +131,25 @@ public class VSphereDockerHost extends StatefulService {
 
     @Override
     public void handlePatch(Operation patch) {
-        updateState(patch);
+        this.updateState(patch);
         // updateState method already set the response body with the merged state
         patch.complete();
     }
 
-    private ExampleServiceState updateState(Operation update) {
+    private VSphereDockerHostState updateState(Operation update) {
         // A DCP service handler is state-less: Everything it needs is provided as part of the
         // of the operation. The body and latest state associated with the service are retrieved
         // below.
-        ExampleServiceState body = getBody(update);
-        ExampleServiceState currentState = getState(update);
+        VSphereDockerHostState body = this.getBody(update);
+        VSphereDockerHostState currentState = this.getState(update);
 
         // use helper that will merge automatically current state, with state supplied in body.
         // Note the usage option PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL has been set on the
         // "name" field.
-        boolean hasStateChanged = Utils.mergeWithState(getStateDescription(),
+        boolean hasStateChanged = Utils.mergeWithState(this.getStateDescription(),
                 currentState, body);
 
-        updateDocument(body, currentState, hasStateChanged);
+        this.updateDocument(body, currentState, hasStateChanged);
 
         if (body.documentExpirationTimeMicros != currentState.documentExpirationTimeMicros) {
             currentState.documentExpirationTimeMicros = body.documentExpirationTimeMicros;
@@ -115,8 +160,8 @@ public class VSphereDockerHost extends StatefulService {
         return currentState;
     }
 
-    private boolean updateDocument(ExampleServiceState body,
-            ExampleServiceState currentState, boolean hasStateChanged) {
+    private boolean updateDocument(VSphereDockerHostState body,
+            VSphereDockerHostState currentState, boolean hasStateChanged) {
         if (body.esxIPAddress != null) {
             currentState.esxIPAddress = body.esxIPAddress;
             hasStateChanged = true;
@@ -134,8 +179,8 @@ public class VSphereDockerHost extends StatefulService {
         // A DELETE can be used to both stop the service, mark it deleted in the index
         // so its excluded from queries, but it can also set its expiration so its state
         // history is permanently removed
-        ExampleServiceState currentState = getState(delete);
-        ExampleServiceState st = delete.getBody(ExampleServiceState.class);
+        VSphereDockerHostState currentState = this.getState(delete);
+        VSphereDockerHostState st = delete.getBody(VSphereDockerHostState.class);
         if (st.documentExpirationTimeMicros > 0) {
             currentState.documentExpirationTimeMicros = st.documentExpirationTimeMicros;
         }
@@ -151,7 +196,7 @@ public class VSphereDockerHost extends StatefulService {
         ServiceDocument template = super.getDocumentTemplate();
 
         PropertyDescription pdTenantName = template.documentDescription.propertyDescriptions.get(
-                ExampleServiceState.FIELD_NAME_TENANT_NAME);
+                VSphereDockerHostState.FIELD_NAME_TENANT_NAME);
 
         // instruct the index to enable SORT on this field.
         pdTenantName.indexingOptions.add(PropertyIndexingOption.SORT);
