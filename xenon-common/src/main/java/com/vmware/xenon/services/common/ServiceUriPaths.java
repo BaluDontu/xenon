@@ -18,6 +18,11 @@ import com.vmware.xenon.common.Utils;
 import com.vmware.xenon.common.WebSocketService;
 
 public final class ServiceUriPaths {
+   // constants for multi-tenancy part
+    public static final String TENANT                             = "/tenant";
+    public static final String GET_TENANT_VOLUMES                 = TENANT
+            + "/volume";
+
     public static final String SERVICE_URI_SUFFIX_SYNCHRONIZATION = "synch";
 
     public static final String SERVICE_URI_SUFFIX_FORWARDING = "forwarding";
