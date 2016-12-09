@@ -1,7 +1,7 @@
 #/bin/bash
 #set -x
 
-VIB_PATH=vmware-esx-vmdkops-0.8.1.8613173.vib
+VIB_PATH=/tmp/scripts/vmware-esx-vmdkops-0.8.1.8613173.vib
 VIB_NAME=esx-vmdkops-service
 LOG_FILE=/tmp/dod-be-scripts.log
 LOG_TERSE=3
