@@ -73,7 +73,7 @@ public class VSphereDockerHost extends StatefulService {
         BufferedReader read = null;
         try {
             Process proc = Runtime.getRuntime()
-                    .exec("sh /Users/bdontu/install_vib.sh 10.160.167.177"); //Whatever you want to execute
+                    .exec("sh /tmp/scripts/install_vib.sh 10.160.167.177"); //Whatever you want to execute
             read = new BufferedReader(new InputStreamReader(
                     proc.getInputStream(), "UTF-8"));
             try {

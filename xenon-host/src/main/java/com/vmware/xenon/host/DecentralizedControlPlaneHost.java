@@ -18,6 +18,7 @@ import java.util.logging.Level;
 import com.vmware.xenon.common.ServiceHost;
 import com.vmware.xenon.services.common.RootNamespaceService;
 import com.vmware.xenon.services.common.VSphereDockerHost;
+import com.vmware.xenon.services.common.VcsTenantService;
 import com.vmware.xenon.ui.UiService;
 
 /**
@@ -48,6 +49,7 @@ public class DecentralizedControlPlaneHost extends ServiceHost {
 
         // start an example factory for folks that want to experiment with service instances
         super.startFactory(VSphereDockerHost.class, VSphereDockerHost::createFactory);
+        super.startFactory(VcsTenantService.class, VcsTenantService::createFactory);
 
         // Start UI service
         super.startService(new UiService());
