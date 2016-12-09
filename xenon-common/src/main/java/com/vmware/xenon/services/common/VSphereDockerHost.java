@@ -62,7 +62,6 @@ public class VSphereDockerHost extends StatefulService {
                 String paramValue = uriParams.get("targets");
                 if (paramValue == null || paramValue.isEmpty()) {
                     this.logInfo("balu - paramValue is null");
-                    request.fail(new IllegalArgumentException("handlePost fail paramValue null"));
                 }
                 for (String param : paramValue.split(":")) {
                     this.logInfo("balu - param:" + param);
