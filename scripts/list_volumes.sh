@@ -1,7 +1,7 @@
 #/bin/bash
 #set -x
 # script to list volumes for given tenant from  given esx host list
-source common.sh
+source /tmp/scripts/common.sh
 
 ALL_ARGs="$0 called with arguments - $*"
 LOG $LOG_DEBUG "$ALL_ARGs"
@@ -25,4 +25,6 @@ for esx_ip in `echo $1 | sed s/,/\ /` ; do
 done
 echo $VOL_LIST
 exit 0;
+
+
 

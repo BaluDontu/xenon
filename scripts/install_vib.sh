@@ -1,7 +1,7 @@
 #/bin/bash
 #set -x
 # script to install vmdkops VIB on a given esx host
-source common.sh
+source /tmp/scripts/common.sh
 ALL_ARGs="$0 called with arguments - $*"
 LOG $LOG_DEBUG "$ALL_ARGs"
 # Validate arguments

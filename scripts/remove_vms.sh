@@ -1,7 +1,7 @@
 #/bin/bash
 #set -x
 # script to remove vms for given tenant on a given esx hosts
-source common.sh
+source /tmp/scripts/common.sh
 
 ALL_ARGs="$0 called with arguments - $*"
 LOG $LOG_DEBUG "$ALL_ARGs"

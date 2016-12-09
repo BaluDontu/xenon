@@ -1,7 +1,7 @@
 #/bin/bash
 #set -x
 # script to create tenant from  given esx host list
-source common.sh
+source /tmp/scripts/common.sh
 
 ALL_ARGs="$0 called with arguments - $*"
 LOG $LOG_DEBUG "$ALL_ARGs"
