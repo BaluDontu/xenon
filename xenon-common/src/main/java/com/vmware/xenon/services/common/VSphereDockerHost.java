@@ -21,11 +21,13 @@ import java.util.Map;
 
 import com.vmware.xenon.common.FactoryService;
 import com.vmware.xenon.common.Operation;
+import com.vmware.xenon.common.Service;
 import com.vmware.xenon.common.ServiceDocument;
 import com.vmware.xenon.common.ServiceDocumentDescription.PropertyDescription;
 import com.vmware.xenon.common.ServiceDocumentDescription.PropertyIndexingOption;
 import com.vmware.xenon.common.ServiceDocumentDescription.PropertyUsageOption;
 import com.vmware.xenon.common.StatefulService;
+import com.vmware.xenon.common.UriUtils;
 import com.vmware.xenon.common.Utils;
 
 /**
@@ -34,20 +36,53 @@ import com.vmware.xenon.common.Utils;
 public class VSphereDockerHost extends StatefulService {
 
     public static final String FACTORY_LINK = ServiceUriPaths.CORE + "/vSphereDockerHost";
-    public Map<String, String> vmID_Name = new HashMap<>();
+    public Map<String, String> vmID_Name_Map = new HashMap<>();
     public Map<String, String> vmID_ESX = new HashMap<>();
+    //Not handling multiple requests. (race condition)
+    private static String vm_id = null;
 
     /**
      * Create a default factory service that starts instances of this service on POST.
      * This method is optional, {@code FactoryService.create} can be used directly
      */
     public static FactoryService createFactory() {
-        return FactoryService.create(VSphereDockerHost.class);
+        FactoryService fs = new FactoryService(VSphereDockerHostState.class) {
+
+            @Override
+            public Service createServiceInstance() throws Throwable {
+                return new VSphereDockerHost();
+            }
+
+            @Override
+            public void handlePost(Operation request) {
+                Map<String, String> uriParams = UriUtils.parseUriQueryParams(request.getUri());
+                //                request.fail(new IllegalArgumentException(
+                //                        "handlePost: Fake failure: " + hello + "url: " + request.getUri()));
+
+                String paramValue = uriParams.get("targets");
+                if (paramValue == null || paramValue.isEmpty()) {
+                    this.logInfo("balu - paramValue is null");
+                    request.fail(new IllegalArgumentException("handlePost fail paramValue null"));
+                }
+                for (String param : paramValue.split(":")) {
+                    this.logInfo("balu - param:" + param);
+                    if (param.startsWith("vm-")) {
+                        vm_id = param;
+                        this.logInfo("balu - vm_id is " + vm_id);
+                        break;
+                    }
+                }
+                super.handlePost(request);
+            }
+        };
+        return fs;
     }
 
     public static class VSphereDockerHostState extends ServiceDocument {
         public static final String FIELD_NAME_ESX_IP = "esxIPAddress";
         public static final String FIELD_NAME_TENANT_NAME = "tenantName";
+        public static final String FIELD_NAME_VM_ID = "vmID";
+        public static final String FIELD_NAME_TARGETS = "targets";
 
         @UsageOption(option = PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
         @PropertyOptions(indexing = PropertyIndexingOption.SORT)
@@ -55,6 +90,10 @@ public class VSphereDockerHost extends StatefulService {
         public String tenantName;
         @UsageOption(option = PropertyUsageOption.REQUIRED)
         public String esxIPAddress;
+        @UsageOption(option = PropertyUsageOption.REQUIRED)
+        public String targets;
+        @UsageOption(option = PropertyUsageOption.OPTIONAL)
+        public String vmID;
     }
 
     public VSphereDockerHost() {
@@ -63,26 +102,23 @@ public class VSphereDockerHost extends StatefulService {
         this.toggleOption(ServiceOption.REPLICATION, true);
         this.toggleOption(ServiceOption.INSTRUMENTATION, true);
         this.toggleOption(ServiceOption.OWNER_SELECTION, true);
-        this.vmID_Name.put("vm-39", "VM1");
-        this.vmID_Name.put("vm-38", "VM2");
-        this.vmID_Name.put("vm-39", "10.160.167.177");
-        this.vmID_Name.put("vm-38", "10.161.12.165");
+        this.vmID_Name_Map.put("vm-23", "VM1");
+        this.vmID_Name_Map.put("vm-18", "VM2");
+        this.vmID_Name_Map.put("vm-23", "10.160.167.177");
+        this.vmID_Name_Map.put("vm-18", "10.161.12.165");
     }
 
-    private int readBashScript() throws IOException {
+    private int readBashScript(String esxIp) throws IOException {
         BufferedReader read = null;
         try {
             Process proc = Runtime.getRuntime()
-                    .exec("sh /tmp/scripts/install_vib.sh 10.160.167.177"); //Whatever you want to execute
+                    .exec("sh /tmp/scripts/install_vib.sh " + esxIp); //Whatever you want to execute
             read = new BufferedReader(new InputStreamReader(
                     proc.getInputStream(), "UTF-8"));
             try {
                 proc.waitFor();
             } catch (InterruptedException e) {
                 return 1;
-            }
-            while (read.ready()) {
-                continue;
             }
         } catch (IOException e) {
             return 3;
@@ -96,36 +132,32 @@ public class VSphereDockerHost extends StatefulService {
 
     @Override
     public void handleStart(Operation startPost) {
-        // Example of state validation on start:
-        // 1) Require that an initial state is provided
-        // 2) Require that the name field is not null
-        // A service could also accept a POST with no body or invalid state and correct it
-
-        if (!startPost.hasBody()) {
-            startPost.fail(new IllegalArgumentException("initial state is required"));
-            return;
-        }
-
-        VSphereDockerHostState s = startPost.getBody(VSphereDockerHostState.class);
-        if (s.esxIPAddress == null) {
-            startPost.fail(new IllegalArgumentException("esxIPAddress is required"));
-            return;
-        }
-        int i;
-        try {
-            i = this.readBashScript();
-            if (i != 0) {
-                startPost.fail(new IllegalArgumentException("readBashScript1 failed " + i));
+        String esxIp = null;
+        if (vm_id != null) {
+            esxIp = this.vmID_Name_Map.get(vm_id);
+            int ret;
+            try {
+                if (esxIp != null) {
+                    ret = this.readBashScript(esxIp);
+                    if (ret != 0) {
+                        startPost.fail(
+                                new IllegalArgumentException("readBashScript1 failed " + ret));
+                    }
+                } else {
+                    startPost.fail(new IllegalArgumentException(
+                            "ESX IP is not found for vm_ID: " + vm_id));
+                }
+            } catch (IOException e) {
+                startPost.fail(new IllegalArgumentException("readBashScript failed"));
             }
-        } catch (IOException e) {
-            startPost.fail(new IllegalArgumentException("readBashScript failed"));
+        } else {
+            startPost.fail(new IllegalArgumentException("vm_id is null"));
         }
         startPost.complete();
     }
 
     @Override
     public void handlePut(Operation put) {
-
         put.complete();
     }
 

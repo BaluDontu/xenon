@@ -30,6 +30,7 @@ public class DecentralizedControlPlaneHost extends ServiceHost {
     public static void main(String[] args) throws Throwable {
         DecentralizedControlPlaneHost h = new DecentralizedControlPlaneHost();
         h.initialize(args);
+        h.toggleDebuggingMode(true);
         h.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             h.log(Level.WARNING, "Host stopping ...");
@@ -52,7 +53,6 @@ public class DecentralizedControlPlaneHost extends ServiceHost {
         super.startFactory(ExampleService.class, ExampleService::createFactory);
 
         super.startFactory(VSphereDockerHost.class, VSphereDockerHost::createFactory);
-
         super.startFactory(VcsTenantService.class, VcsTenantService::createFactory);
 
 
