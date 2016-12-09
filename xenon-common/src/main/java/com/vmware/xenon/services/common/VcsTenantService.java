@@ -13,7 +13,7 @@
 
 package com.vmware.xenon.services.common;
 
-import java.util.UUID;
+import java.util.Set;
 
 import com.vmware.xenon.common.FactoryService;
 import com.vmware.xenon.common.Operation;
@@ -31,14 +31,17 @@ public class VcsTenantService extends StatefulService {
     }
 
     public static class VcsTenantState extends ServiceDocument {
-        @UsageOption(option = PropertyUsageOption.ID)
-        public String id;
-
         @UsageOption(option = PropertyUsageOption.REQUIRED)
         public String name;
 
         @UsageOption(option = PropertyUsageOption.OPTIONAL)
         public String description;
+
+        @UsageOption(option = PropertyUsageOption.OPTIONAL)
+        public Set<String> vms;
+
+        @UsageOption(option = PropertyUsageOption.OPTIONAL)
+        public Set<Privilege> privileges;
     }
 
     public VcsTenantService() {
@@ -56,9 +59,6 @@ public class VcsTenantService extends StatefulService {
             return;
         }
         VcsTenantState newState = post.getBody(VcsTenantState.class);
-        if (newState.id == null || newState.id.isEmpty()) {
-            newState.id = UUID.randomUUID().toString();
-        }
         post.setBody(newState).complete();
     }
 
@@ -96,6 +96,24 @@ public class VcsTenantService extends StatefulService {
         if (newState.description != null) {
             currentState.description = newState.description;
         }
+        if (newState.vms != null && !newState.vms.isEmpty()) {
+            if (currentState.vms == null || currentState.vms.isEmpty()) {
+                currentState.vms = newState.vms;
+                // TODO: Propagate tenants to related ESX hosts
+            } else {
+                currentState.vms.addAll(newState.vms);
+                // TODO: Propagate tenants to related ESX hosts
+            }
+        }
+        if (newState.privileges != null && !newState.privileges.isEmpty()) {
+            if (currentState.privileges == null || currentState.privileges.isEmpty()) {
+                currentState.privileges = newState.privileges;
+                // TODO: Propagate tenants to related ESX hosts
+            } else {
+                currentState.privileges.addAll(newState.privileges);
+                // TODO: Propagate tenants to related ESX hosts
+            }
+        }
     }
 
     @Override
@@ -115,4 +133,61 @@ public class VcsTenantService extends StatefulService {
         }
         delete.complete();
     }
+}
+
+class Privilege {
+    public String getDatastore() {
+        return this.datastore;
+    }
+
+    public void setDatastore(String datastore) {
+        this.datastore = datastore;
+    }
+
+    public boolean isCreateVolume() {
+        return this.createVolume;
+    }
+
+    public void setCreateVolume(boolean createVolume) {
+        this.createVolume = createVolume;
+    }
+
+    public boolean isDeleteVolume() {
+        return this.deleteVolume;
+    }
+
+    public void setDeleteVolume(boolean deleteVolume) {
+        this.deleteVolume = deleteVolume;
+    }
+
+    public boolean isMountVolume() {
+        return this.mountVolume;
+    }
+
+    public void setMountVolume(boolean mountVolume) {
+        this.mountVolume = mountVolume;
+    }
+
+    public int getVolumeMaxSize() {
+        return this.volumeMaxSize;
+    }
+
+    public void setVolumeMaxSize(int volumeMaxSize) {
+        this.volumeMaxSize = volumeMaxSize;
+    }
+
+    public int getVolumeTotalSize() {
+        return this.volumeTotalSize;
+    }
+
+    public void setVolumeTotalSize(int volumeTotalSize) {
+        this.volumeTotalSize = volumeTotalSize;
+    }
+
+    private String datastore;
+    private boolean createVolume;
+    private boolean deleteVolume;
+    private boolean mountVolume;
+    private int volumeMaxSize;
+    private int volumeTotalSize;
 }

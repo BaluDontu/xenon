@@ -51,6 +51,7 @@ public class DecentralizedControlPlaneHost extends ServiceHost {
 
         // start an example factory for folks that want to experiment with service instances
         super.startFactory(ExampleService.class, ExampleService::createFactory);
+
         super.startFactory(VSphereDockerHost.class, VSphereDockerHost::createFactory);
         super.startFactory(VcsTenantService.class, VcsTenantService::createFactory);
 
