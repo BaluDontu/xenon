@@ -17,7 +17,6 @@ import java.util.logging.Level;
 
 import com.vmware.xenon.common.ServiceHost;
 import com.vmware.xenon.services.common.ExampleService;
-import com.vmware.xenon.services.common.GetVolumeService;
 import com.vmware.xenon.services.common.RootNamespaceService;
 import com.vmware.xenon.services.common.VSphereDockerHost;
 import com.vmware.xenon.services.common.VcsTenantService;
